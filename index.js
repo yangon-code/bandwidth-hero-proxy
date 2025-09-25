@@ -3,17 +3,28 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 
-// هذا هو البروكسي الذكي
+// --- فحص صحي ذكي ---
+// هذا الجزء يرد على الطلبات الفارغة برسالة "أنا حي"
+app.get('/', (req, res, next) => {
+    // إذا كان الطلب لا يحتوي على رابط صورة، أرسل رسالة نجاح
+    if (!req.query.url) {
+        res.status(200).send('Bandwidth Hero Proxy is alive and running!');
+        return; // توقف هنا ولا تكمل إلى البروكسي
+    }
+    // إذا كان هناك رابط صورة، اسمح للطلب بالمرور إلى البروكسي
+    next();
+});
+
+
+// --- البروكسي الرئيسي ---
+// هذا الجزء لن يعمل إلا إذا كان هناك رابط صورة في الطلب
 app.use('/', createProxyMiddleware({
-    target: 'https://images.weserv.nl',  // الهدف الصحيح
+    target: 'https://images.weserv.nl',
     changeOrigin: true,
     pathRewrite: (path, req) => {
-        // هذا الجزء يأخذ الرابط الأصلي من بعد علامة الاستفهام ويعيد بناءه لـ weserv.nl
-        // مثال: /?url=google.com/logo.png&q=70  ->  /?url=google.com/logo.png&q=70
         return path;
     },
     onProxyReq: (proxyReq, req, res) => {
-        // نزيل بعض الهيدرز التي قد تسبب مشاكل
         proxyReq.removeHeader('x-forwarded-for');
         proxyReq.removeHeader('x-forwarded-host');
         proxyReq.removeHeader('x-forwarded-proto');
@@ -22,5 +33,5 @@ app.use('/', createProxyMiddleware({
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`Smart Proxy is running on port ${port}`);
+    console.log(`Smart Proxy with Health Check is running on port ${port}`);
 });
